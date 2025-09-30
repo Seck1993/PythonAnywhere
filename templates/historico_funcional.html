@@ -1,18 +1,45 @@
 {% extends "base.html" %}
 
-{% block title %}Histórico Funcional{% endblock %}
+{% block title %}Histórico Funcional de {{ aluno.user.nome_completo }}{% endblock %}
 
 {% block content %}
 <div class="content-header">
     <h1>Histórico Funcional</h1>
-    <p>Registros de atualizações do perfil, funções desempenhadas e outras atividades.</p>
+    <p>Registros de atualizações de perfil, funções e outras atividades para <strong>{{ aluno.user.nome_completo }}</strong>.</p>
 </div>
 
 <div class="table-container">
-    <div class="empty-state">
-        <div class="empty-icon">📋</div>
-        <h2>Nenhum Histórico Funcional Registrado</h2>
-        <p>Não há atividades funcionais registradas no momento.</p>
+    {% if historico_atividades %}
+        <div class="table-responsive">
+            <table class="table-styled">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Tipo</th>
+                        <th>Descrição</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for atividade in historico_atividades %}
+                    <tr>
+                        <td data-label="Data">{{ atividade.data_inicio.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td data-label="Tipo">{{ atividade.tipo }}</td>
+                        <td data-label="Descrição">{{ atividade.descricao }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">📋</div>
+            <h2>Nenhum Histórico Funcional Registrado</h2>
+            <p>Não há atividades funcionais registradas para este aluno no momento.</p>
+        </div>
+    {% endif %}
+
+    <div class="form-actions">
+        <a href="{{ url_for('aluno.listar_alunos') }}" class="btn btn-secondary">Voltar para a Lista de Alunos</a>
     </div>
 </div>
 {% endblock %}

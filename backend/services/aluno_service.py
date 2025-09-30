@@ -149,6 +149,9 @@ class AlunoService:
                     alteracoes.append(f"Nome alterado de '{aluno.user.nome_completo or 'N/A'}' para '{nome_completo or 'N/A'}'")
                 if aluno.user.matricula != matricula_nova:
                     alteracoes.append(f"Matrícula alterada de '{aluno.user.matricula or 'N/A'}' para '{matricula_nova or 'N/A'}'")
+                if aluno.user.posto_graduacao != data.get('posto_graduacao'):
+                    alteracoes.append(f"Posto/Graduação alterado de '{aluno.user.posto_graduacao or 'N/A'}' para '{data.get('posto_graduacao') or 'N/A'}'")
+
             if aluno.opm != opm:
                 alteracoes.append(f"OPM alterada de '{aluno.opm or 'N/A'}' para '{opm or 'N/A'}'")
             if aluno.turma_id != nova_turma_id:
@@ -173,6 +176,7 @@ class AlunoService:
             if aluno.user:
                 aluno.user.nome_completo = nome_completo
                 aluno.user.matricula = matricula_nova
+                aluno.user.posto_graduacao = data.get('posto_graduacao')
             aluno.opm = opm
             aluno.turma_id = nova_turma_id
             aluno.funcao_atual = nova_funcao_atual

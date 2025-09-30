@@ -1,46 +1,83 @@
 {% extends "base.html" %}
+
+{% block title %}Editar Instrutor - {{ instrutor.user.nome_completo }}{% endblock %}
+
 {% block content %}
-<h1>Editar Instrutor</h1>
-<form method="post">
-  {{ form.csrf_token }}
-  <div class="mb-2">
-    <label>Nome completo</label>
-    {{ form.nome_completo(class="form-control") }}
-  </div>
-  <div class="mb-2">
-    <label>Nome de guerra</label>
-    {{ form.nome_de_guerra(class="form-control") }}
-  </div>
-  <div class="mb-2">
-    <label>Posto/Graduação</label>
-    {{ form.posto_graduacao_select(class="form-select", id="posto_graduacao_select") }}
-  </div>
-  <div class="mb-2" id="postoOutroWrap" style="display: none;">
-    <label>Outro (especifique)</label>
-    {{ form.posto_graduacao_outro(class="form-control", id="posto_graduacao_outro") }}
-  </div>
-  <div class="mb-2">
-    <label>Telefone</label>
-    {{ form.telefone(class="form-control") }}
-  </div>
-  <div class="form-check mb-3">
-    {{ form.is_rr(class="form-check-input", id="is_rr") }}
-    <label class="form-check-label" for="is_rr">RR</label>
-  </div>
-  <button class="btn btn-primary" type="submit">Salvar</button>
-  <a class="btn btn-secondary" href="{{ url_for('instrutor.listar_instrutores') }}">Voltar</a>
-</form>
+<div class="content-header">
+    <h1>Editar Perfil do Instrutor</h1>
+    <p>Atualize as informações de <strong>{{ instrutor.user.nome_completo or instrutor.user.username }}</strong>.</p>
+</div>
+
+<div class="auth-container">
+    <div class="auth-card" style="max-width: 700px;">
+        <h2>Dados do Instrutor</h2>
+        <form method="POST" action="{{ url_for('instrutor.editar_instrutor', instrutor_id=instrutor.id) }}">
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.nome_completo.label(class="form-label") }}
+                {{ form.nome_completo(class="form-control") }}
+            </div>
+            <div class="form-group">
+                {{ form.nome_de_guerra.label(class="form-label") }}
+                {{ form.nome_de_guerra(class="form-control") }}
+            </div>
+            <div class="form-group">
+                {{ form.matricula.label(class="form-label") }}
+                {{ form.matricula(class="form-control") }}
+                <small class="form-text text-muted">A matrícula não pode ser alterada.</small>
+            </div>
+            <div class="form-group">
+                {{ form.email.label(class="form-label") }}
+                {{ form.email(class="form-control") }}
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        {{ form.posto_graduacao_select.label(class="form-label") }}
+                        {{ form.posto_graduacao_select(class="form-control", id="posto_graduacao_select") }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group" id="posto_graduacao_outro_div" style="display:none;">
+                        {{ form.posto_graduacao_outro.label(class="form-label") }}
+                        {{ form.posto_graduacao_outro(class="form-control", id="posto_graduacao_outro") }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                {{ form.telefone.label(class="form-label") }}
+                {{ form.telefone(class="form-control") }}
+            </div>
+
+            <div class="form-check mb-3">
+                {{ form.is_rr(class="form-check-input") }}
+                {{ form.is_rr.label(class="form-check-label") }}
+            </div>
+
+            <div class="form-actions">
+                <a href="{{ url_for('instrutor.listar_instrutores') }}" class="btn btn-secondary">Cancelar</a>
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+    </div>
+</div>
 
 <script>
-(function(){
-  function syncOutro(){
-    var sel = document.getElementById('posto_graduacao_select');
-    var wrap = document.getElementById('postoOutroWrap');
-    if (!sel || !wrap) return;
-    wrap.style.display = (sel.value === 'Outro') ? 'block' : 'none';
+document.addEventListener('DOMContentLoaded', function () {
+  const selectEl = document.getElementById('posto_graduacao_select');
+  const outroDiv = document.getElementById('posto_graduacao_outro_div');
+  function toggleOutro() {
+    if (selectEl && outroDiv) {
+      outroDiv.style.display = (selectEl.value === 'Outro') ? 'block' : 'none';
+    }
   }
-  document.addEventListener('change', syncOutro);
-  document.addEventListener('DOMContentLoaded', syncOutro);
-})();
+  if (selectEl) {
+    selectEl.addEventListener('change', toggleOutro);
+    toggleOutro(); // Executa ao carregar a página
+  }
+});
 </script>
 {% endblock %}

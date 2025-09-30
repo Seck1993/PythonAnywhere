@@ -17,6 +17,19 @@ from utils.decorators import admin_or_programmer_required, school_admin_or_progr
 
 aluno_bp = Blueprint('aluno', __name__, url_prefix='/aluno')
 
+# Lista de opções padrão para Posto/Graduação
+posto_graduacao_choices = [
+    ('Soldado PM', 'Soldado PM'),
+    ('2º Sargento PM', '2º Sargento PM'),
+    ('1º Sargento PM', '1º Sargento PM'),
+    ('1º Tenente PM', '1º Tenente PM'),
+    ('Capitão PM', 'Capitão PM'),
+    ('Major PM', 'Major PM'),
+    ('Tenente-Coronel PM', 'Tenente-Coronel PM'),
+    ('Coronel PM', 'Coronel PM'),
+    ('Outro', 'Outro')
+]
+
 class AlunoProfileForm(FlaskForm):
     foto_perfil = FileField('Foto de Perfil', validators=[FileAllowed(['jpg', 'png', 'jpeg'], 'Apenas imagens!')])
     nome_completo = StringField('Nome Completo', validators=[DataRequired()])
@@ -61,6 +74,7 @@ class EditAlunoForm(FlaskForm):
     foto_perfil = FileField('Alterar Foto de Perfil', validators=[FileAllowed(['jpg', 'png', 'jpeg'], 'Apenas imagens!')])
     nome_completo = StringField('Nome Completo', validators=[DataRequired()])
     matricula = StringField('Matrícula', validators=[DataRequired()])
+    posto_graduacao = SelectField('Posto/Graduação', choices=posto_graduacao_choices, validators=[DataRequired()])
     opm = StringField('OPM', validators=[DataRequired()])
     turma_id = SelectField('Turma / Pelotão', coerce=int, validators=[DataRequired()])
     funcao_atual = SelectField('Função Atual', choices=[
@@ -74,8 +88,6 @@ class EditAlunoForm(FlaskForm):
         ('Motorista 2', 'Motorista 2'), ('Telefonista 1', 'Telefonista 1'), ('Telefonista 2', 'Telefonista 2')
     ], validators=[Optional()])
     submit = SubmitField('Atualizar Perfil')
-
-# --- ROTA 'completar_cadastro' REMOVIDA DAQUI ---
 
 @aluno_bp.route('/listar')
 @login_required
@@ -115,6 +127,7 @@ def editar_aluno(aluno_id):
         if aluno.user:
             form.nome_completo.data = aluno.user.nome_completo
             form.matricula.data = aluno.user.matricula
+            form.posto_graduacao.data = aluno.user.posto_graduacao
         form.opm.data = aluno.opm
         form.turma_id.data = aluno.turma_id
         form.funcao_atual.data = aluno.funcao_atual

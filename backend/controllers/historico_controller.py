@@ -58,9 +58,33 @@ def elogios():
 @historico_bp.route('/funcional')
 @login_required
 @aluno_profile_required
-def historico_funcional():
-    """Página para visualizar o histórico funcional (placeholder)."""
-    return render_template('historico_funcional.html')
+def historico_funcional_proprio():
+    """Página para o aluno visualizar o próprio histórico funcional."""
+    aluno_id = current_user.aluno_profile.id
+    aluno = AlunoService.get_aluno_by_id(aluno_id)
+    if not aluno:
+        flash("Aluno não encontrado.", "danger")
+        return redirect(url_for('main.dashboard'))
+
+    historico_atividades = HistoricoService.get_historico_atividades_for_aluno(aluno_id)
+    return render_template('historico_funcional.html',
+                           aluno=aluno,
+                           historico_atividades=historico_atividades)
+
+@historico_bp.route('/funcional/<int:aluno_id>')
+@login_required
+@can_view_management_pages_required
+def historico_funcional(aluno_id):
+    """Página para visualizar o histórico funcional de um aluno específico."""
+    aluno = AlunoService.get_aluno_by_id(aluno_id)
+    if not aluno:
+        flash("Aluno não encontrado.", "danger")
+        return redirect(url_for('aluno.listar_alunos'))
+
+    historico_atividades = HistoricoService.get_historico_atividades_for_aluno(aluno_id)
+    return render_template('historico_funcional.html',
+                           aluno=aluno,
+                           historico_atividades=historico_atividades)
 # --- FIM DAS NOVAS ROTAS ---
 
 @historico_bp.route('/minhas-notas')

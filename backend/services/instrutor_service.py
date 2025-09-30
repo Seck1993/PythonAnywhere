@@ -63,6 +63,7 @@ class InstrutorService:
                 nome_completo=nome_completo or None,
                 nome_de_guerra=nome_de_guerra or None,
                 matricula=matricula,
+                posto_graduacao=posto,
                 is_active=True
             )
             user.set_password(password)
@@ -71,7 +72,6 @@ class InstrutorService:
 
             instrutor = Instrutor(
                 user_id=user.id,
-                posto_graduacao=posto,
                 telefone=telefone,
                 is_rr=is_rr
             )
@@ -111,10 +111,11 @@ class InstrutorService:
             telefone = (data.get('telefone') or '').strip() or None
             is_rr = str(data.get('is_rr') or '').lower() in ('sim', 'true', '1', 'on')
 
+            user.posto_graduacao = posto
+
             # Cria o novo perfil
             new_profile = Instrutor(
                 user_id=user_id,
-                posto_graduacao=posto,
                 telefone=telefone,
                 is_rr=is_rr
             )
@@ -144,6 +145,7 @@ class InstrutorService:
         try:
             nome_completo = (data.get('nome_completo') or '').strip()
             nome_de_guerra = (data.get('nome_de_guerra') or '').strip()
+            email = (data.get('email') or '').strip()
             telefone = (data.get('telefone') or '').strip()
 
             posto_sel = (data.get('posto_graduacao_select') or '').strip()
@@ -156,13 +158,21 @@ class InstrutorService:
             if user:
                 if nome_completo: user.nome_completo = nome_completo
                 if nome_de_guerra: user.nome_de_guerra = nome_de_guerra
+                if email and user.email != email:
+                    # Verifica se o novo e-mail já existe
+                    if db.session.scalar(select(User.id).where(User.email == email, User.id != user.id)):
+                        raise IntegrityError("O e-mail fornecido já está em uso.", params=None, orig=None)
+                    user.email = email
+                if posto: user.posto_graduacao = posto
 
             instrutor.telefone = (telefone or None)
-            instrutor.posto_graduacao = posto
             instrutor.is_rr = is_rr
 
             db.session.commit()
             return True, "Instrutor atualizado com sucesso."
+        except IntegrityError as e:
+            db.session.rollback()
+            return False, str(e.orig) or "Erro de integridade. Verifique se o e-mail já está em uso."
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception("Erro ao atualizar instrutor")

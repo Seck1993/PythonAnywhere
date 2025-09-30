@@ -64,12 +64,15 @@ class MeuPerfilForm(FlaskForm):
     nome_completo = StringField('Nome Completo', validators=[DataRequired()])
     email = StringField('E-mail', validators=[DataRequired(), Email()])
     
-    # --- CAMPO ALTERADO PARA SelectField ---
     posto_graduacao = SelectField('Posto/Graduação', choices=[
-        ('Soldado', 'Soldado'), ('Cabo', 'Cabo'), ('3º Sargento', '3º Sargento'),
-        ('2º Sargento', '2º Sargento'), ('1º Sargento', '1º Sargento'),
-        ('Tenente', 'Tenente'), ('Capitão', 'Capitão'), ('Major', 'Major'),
-        ('Tenente-Coronel', 'Tenente-Coronel'), ('Coronel', 'Coronel')
+        ('Soldado PM', 'Soldado PM'),
+        ('2º Sargento PM', '2º Sargento PM'),
+        ('1º Sargento PM', '1º Sargento PM'),
+        ('1º Tenente PM', '1º Tenente PM'),
+        ('Capitão PM', 'Capitão PM'),
+        ('Major PM', 'Major PM'),
+        ('Tenente-Coronel PM', 'Tenente-Coronel PM'),
+        ('Coronel PM', 'Coronel PM'),
     ], validators=[DataRequired()])
 
     current_password = PasswordField('Senha Atual', validators=[Optional()])

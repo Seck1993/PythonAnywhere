@@ -35,8 +35,12 @@
             <div class="form-group">
                 {{ form.matricula.label }}
                  {# --- CORREÇÃO APLICADA AQUI: Busca a matrícula do 'user' --- #}
-                {{ form.matricula(class="form-control", readonly=not self_edit) }}
-                 {% if self_edit %}<small>A matrícula não pode ser alterada.</small>{% endif %}
+                {{ form.matricula(class="form-control", readonly=True) }}
+                 <small>A matrícula não pode ser alterada.</small>
+            </div>
+            <div class="form-group">
+                {{ form.posto_graduacao.label }}
+                {{ form.posto_graduacao(class="form-control") }}
             </div>
             <div class="form-group">
                 {{ form.opm.label }}
@@ -44,8 +48,7 @@
             </div>
             <div class="form-group">
                 {{ form.turma_id.label }}
-                {{ form.turma_id(class="form-control", disabled=self_edit) }}
-                {% if self_edit %}<small>A turma não pode ser alterada.</small>{% endif %}
+                {{ form.turma_id(class="form-control") }}
             </div>
             <div class="form-group">
                 {{ form.funcao_atual.label }}

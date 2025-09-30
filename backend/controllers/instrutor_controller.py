@@ -15,6 +15,19 @@ from utils.decorators import admin_or_programmer_required, school_admin_or_progr
 
 instrutor_bp = Blueprint('instrutor', __name__, url_prefix='/instrutor')
 
+# Lista de opções padrão para Posto/Graduação
+posto_graduacao_choices = [
+    ('Soldado PM', 'Soldado PM'),
+    ('2º Sargento PM', '2º Sargento PM'),
+    ('1º Sargento PM', '1º Sargento PM'),
+    ('1º Tenente PM', '1º Tenente PM'),
+    ('Capitão PM', 'Capitão PM'),
+    ('Major PM', 'Major PM'),
+    ('Tenente-Coronel PM', 'Tenente-Coronel PM'),
+    ('Coronel PM', 'Coronel PM'),
+    ('Outro', 'Outro')
+]
+
 class InstrutorForm(FlaskForm):
     nome_completo = StringField('Nome Completo', validators=[DataRequired()])
     nome_de_guerra = StringField('Nome de Guerra', validators=[DataRequired()])
@@ -25,13 +38,7 @@ class InstrutorForm(FlaskForm):
         EqualTo('password2', message='As senhas devem corresponder.')
     ])
     password2 = PasswordField('Confirmar Senha', validators=[DataRequired()])
-    posto_graduacao_select = SelectField('Posto/Graduação', choices=[
-        ('Soldado', 'Soldado'), ('Cabo', 'Cabo'), ('3º Sargento', '3º Sargento'),
-        ('2º Sargento', '2º Sargento'), ('1º Sargento', '1º Sargento'),
-        ('Tenente', 'Tenente'), ('Capitão', 'Capitão'), ('Major', 'Major'),
-        ('Tenente-Coronel', 'Tenente-Coronel'), ('Coronel', 'Coronel'),
-        ('Outro', 'Outro')
-    ], validators=[DataRequired()])
+    posto_graduacao_select = SelectField('Posto/Graduação', choices=posto_graduacao_choices, validators=[DataRequired()])
     posto_graduacao_outro = StringField('Outro (especifique)', validators=[Optional()])
     telefone = StringField('Telefone', validators=[Optional()])
     is_rr = BooleanField('RR')
@@ -40,25 +47,19 @@ class InstrutorForm(FlaskForm):
 class EditInstrutorForm(FlaskForm):
     nome_completo = StringField('Nome Completo', validators=[DataRequired()])
     nome_de_guerra = StringField('Nome de Guerra', validators=[DataRequired()])
-    posto_graduacao_select = SelectField('Posto/Graduação', choices=[
-        ('Soldado', 'Soldado'), ('Cabo', 'Cabo'), ('3º Sargento', '3º Sargento'),
-        ('2º Sargento', '2º Sargento'), ('1º Sargento', '1º Sargento'),
-        ('Tenente', 'Tenente'), ('Capitão', 'Capitão'), ('Major', 'Major'),
-        ('Tenente-Coronel', 'Tenente-Coronel'), ('Coronel', 'Coronel'),
-        ('Outro', 'Outro')
-    ], validators=[DataRequired()])
+    matricula = StringField('Matrícula', render_kw={'readonly': True})
+    email = StringField('E-mail', validators=[DataRequired(), Email()])
+    posto_graduacao_select = SelectField('Posto/Graduação', choices=posto_graduacao_choices, validators=[DataRequired()])
     posto_graduacao_outro = StringField('Outro (especifique)', validators=[Optional()])
     telefone = StringField('Telefone', validators=[Optional()])
-    is_rr = BooleanField('RR')
-    submit = SubmitField('Salvar')
+    is_rr = BooleanField('Efetivo da Reserva Remunerada (RR)')
+    submit = SubmitField('Salvar Alterações')
 
 class DeleteForm(FlaskForm):
     pass
 
 @instrutor_bp.route('/')
 @login_required
-# --- CORREÇÃO APLICADA AQUI ---
-# Permite que todos os usuários logados vejam a lista
 @can_view_management_pages_required
 def listar_instrutores():
     instrutores = InstrutorService.get_all_instrutores()
@@ -88,17 +89,24 @@ def cadastrar_instrutor():
 @school_admin_or_programmer_required
 def editar_instrutor(instrutor_id):
     instrutor = InstrutorService.get_instrutor_by_id(instrutor_id)
-    if not instrutor:
+    if not instrutor or not instrutor.user:
         flash('Instrutor não encontrado.', 'danger')
         return redirect(url_for('instrutor.listar_instrutores'))
     
-    form = EditInstrutorForm(obj=instrutor.user)
+    form = EditInstrutorForm(obj=instrutor)
+    
     if request.method == 'GET':
-        form.is_rr.data = instrutor.is_rr
+        # Preenche os dados do usuário associado
+        form.nome_completo.data = instrutor.user.nome_completo
+        form.nome_de_guerra.data = instrutor.user.nome_de_guerra
+        form.matricula.data = instrutor.user.matricula
+        form.email.data = instrutor.user.email
+        
+        # Lógica para o campo 'posto_graduacao'
         posto = instrutor.user.posto_graduacao
         if posto in [choice[0] for choice in form.posto_graduacao_select.choices]:
             form.posto_graduacao_select.data = posto
-        else:
+        elif posto:
             form.posto_graduacao_select.data = 'Outro'
             form.posto_graduacao_outro.data = posto
 
@@ -110,7 +118,7 @@ def editar_instrutor(instrutor_id):
         else:
             flash(message, 'danger')
     
-    return render_template('editar_instrutor.html', form=form)
+    return render_template('editar_instrutor.html', form=form, instrutor=instrutor)
 
 @instrutor_bp.route('/excluir/<int:instrutor_id>', methods=['POST'])
 @login_required
