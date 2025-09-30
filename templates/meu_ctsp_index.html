@@ -1,3 +1,4 @@
+{% raw %}
 {% extends "base.html" %}
 
 {% block title %}Meu CTSP{% endblock %}
@@ -39,7 +40,7 @@
         </div>
     </a>
 
-    <a href="{{ url_for('historico.historico_funcional') }}" class="module-card-link">
+    <a href="{{ url_for('historico.historico_funcional', aluno_id=current_user.aluno_profile.id) }}" class="module-card-link">
         <div class="module-card">
             <div class="card-content">
                 <div class="card-icon">📋</div>
@@ -57,3 +58,4 @@
 }
 </style>
 {% endblock %}
+{% endraw %}

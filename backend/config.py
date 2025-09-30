@@ -9,11 +9,17 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     BABEL_DEFAULT_LOCALE = 'pt_BR'
 
+    # --- CONFIGURAÇÕES DE E-MAIL (Versão Final e Correta) ---
+    # Estas variáveis serão lidas do seu ficheiro .env
+    MAIL_SERVER = os.environ.get('MAIL_SERVER')
+    MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
+    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() in ['true', 'on', '1']
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER')
+    # --- FIM DAS ALTERAÇÕES ---
+
     @staticmethod
     def init_app(app):
-        """
-        Executa verificações de configuração depois que a app foi criada.
-        Isso evita erros durante a importação em ambientes de teste.
-        """
         if not app.config.get("SECRET_KEY") and not app.testing:
             raise ValueError("No SECRET_KEY set for Flask application. Set the SECRET_KEY environment variable.")

@@ -7,8 +7,9 @@ from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from flask_babel import Babel
-
+# --- A IMPORTAÇÃO DO 'mail' FOI REMOVIDA DAQUI ---
 from backend.extensions import limiter
+
 from backend.config import Config
 from backend.models.database import db
 from backend.models.user import User
@@ -29,7 +30,6 @@ from backend.models.turma import Turma
 from backend.models.turma_cargo import TurmaCargo
 from backend.models.user_school import UserSchool
 from backend.services.asset_service import AssetService
-# IMPORTAÇÃO DOS NOVOS MODELOS DE QUESTIONÁRIO
 from backend.models.questionario import Questionario
 from backend.models.pergunta import Pergunta
 from backend.models.opcao_resposta import OpcaoResposta
@@ -47,7 +47,6 @@ def create_app(config_class=Config):
     app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
     app.config.from_object(config_class)
 
-    # Executa a verificação da config (importante para produção)
     config_class.init_app(app)
 
     # Inicializa as extensões com a app
@@ -56,6 +55,7 @@ def create_app(config_class=Config):
     CSRFProtect(app)
     limiter.init_app(app)
     Babel(app)
+    # --- A LINHA mail.init_app(app) FOI REMOVIDA DAQUI ---
 
     login_manager = LoginManager()
     login_manager.login_view = 'auth.login'
@@ -65,7 +65,6 @@ def create_app(config_class=Config):
     def load_user(user_id):
         return db.session.get(User, int(user_id))
 
-    # Um contexto é necessário para registrar blueprints e outras configurações
     with app.app_context():
         AssetService.initialize_upload_folder(app)
         register_blueprints(app)
@@ -94,7 +93,6 @@ def register_blueprints(app):
     from backend.controllers.admin_controller import admin_escola_bp
     from backend.controllers.questionario_controller import questionario_bp
 
-    # O prefixo da URL já está definido dentro de cada blueprint
     app.register_blueprint(auth_bp)
     app.register_blueprint(aluno_bp)
     app.register_blueprint(instrutor_bp)
@@ -155,7 +153,6 @@ def register_cli_commands(app):
                 user.set_password(super_admin_password)
             else:
                 print("Criando o usuário super administrador 'super_admin'...")
-                # CORREÇÃO: trocado id_func por matricula
                 user = User(
                     matricula='SUPER_ADMIN', 
                     username='super_admin', 
@@ -180,7 +177,6 @@ def register_cli_commands(app):
                 print("O usuário 'programador' já existe.")
             else:
                 print("Criando o usuário programador...")
-                # CORREÇÃO: trocado id_func por matricula
                 user = User(
                     matricula='PROG001', 
                     username='programador', 
@@ -196,27 +192,20 @@ def register_cli_commands(app):
     @app.cli.command("clear-data")
     @click.option('--app', is_flag=True, help='Limpa apenas os dados da aplicação (alunos, turmas, etc).')
     def clear_data_command(app):
-        """Apaga dados da aplicação, preservando a estrutura e os admins."""
         from scripts.clear_data import clear_transactional_data
-        
         if not app:
              if input("ATENÇÃO: Este comando irá apagar TODOS os dados de alunos, turmas, etc. Deseja continuar? (s/n): ").lower() != 's':
                 print("Operação cancelada.")
                 return
-        
         clear_transactional_data()
     
-    # --- NOVO COMANDO PARA POPULAR O QUESTIONÁRIO ---
     @app.cli.command("seed-questionario")
     def seed_questionario_command():
-        """Cria um questionário de exemplo no banco de dados."""
         from scripts.seed_questionario import seed_questionario_for_cli
         with app.app_context():
             seed_questionario_for_cli()
         print("Comando de popular questionário executado.")
 
-
-# Este bloco só é executado quando o arquivo é chamado diretamente
 if __name__ == '__main__':
     app = create_app()
     app.run(debug=True)

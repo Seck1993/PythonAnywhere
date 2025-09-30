@@ -1,61 +1,53 @@
+# backend/services/password_reset_service.py
+
 import os
 import secrets
-from datetime import datetime, timedelta, timezone # <-- Importar timezone
+from datetime import datetime, timedelta, timezone
 from flask import current_app
 from ..models.database import db
 from ..models.user import User
 from ..models.password_reset_token import PasswordResetToken
+from itsdangerous import SignatureExpired, BadTimeSignature
 
 class PasswordResetService:
-    DEFAULT_EXP_MINUTES = 30
+    DEFAULT_EXP_MINUTES = 60 # Aumentado para 1 hora
 
     @staticmethod
-    def generate_token_for_user(user_id: int, admin_id: int | None = None, exp_minutes: int | None = None) -> str:
+    def generate_token_for_user(user_id: int) -> str:
+        """
+        Gera um token de redefinição de senha seguro e com tempo de expiração.
+        """
         user = db.session.get(User, user_id)
         if not user:
             raise ValueError("Usuário não encontrado.")
 
-        minutes = exp_minutes or int(os.environ.get('PASSWORD_RESET_TOKEN_EXP_MIN', PasswordResetService.DEFAULT_EXP_MINUTES))
-        raw = PasswordResetService._random_token()
-        token = PasswordResetToken(
-            user_id=user.id,
-            token_hash=PasswordResetToken.hash_token(raw),
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=minutes), # <-- CORRIGIDO
-            created_by_admin_id=admin_id
-        )
-        db.session.add(token)
-        db.session.commit()
-        return raw
+        s = PasswordResetToken.get_serializer()
+        # O token agora contém o ID do usuário e um salt para segurança
+        return s.dumps(user.email, salt='password-reset-salt')
+    
+    @staticmethod
+    def verify_reset_token(token: str) -> User | None:
+        """
+        Verifica um token de redefinição de senha e retorna o usuário se for válido.
+        """
+        s = PasswordResetToken.get_serializer()
+        try:
+            # Tenta carregar o token com o mesmo salt e tempo máximo de vida
+            email = s.loads(
+                token, 
+                salt='password-reset-salt',
+                max_age=PasswordResetService.DEFAULT_EXP_MINUTES * 60
+            )
+            return db.session.scalar(db.select(User).filter_by(email=email))
+        except (SignatureExpired, BadTimeSignature):
+            # Se o token for inválido ou expirar, retorna None
+            return None
 
     @staticmethod
-    def consume_with_user_and_raw_token(matricula: str, raw_token: str) -> User | None:
-        # CORRIGIDO: de id_func para matricula
-        user = db.session.execute(db.select(User).filter_by(matricula=matricula)).scalar_one_or_none()
-        if not user:
-            return None
-        # Busca tokens usáveis mais recentes primeiro
-        token = db.session.execute(
-            db.select(PasswordResetToken)
-            .where(PasswordResetToken.user_id == user.id)
-            .order_by(PasswordResetToken.created_at.desc())
-        ).scalars().first()
-
-        if not token:
-            return None
-
-        if not token.is_usable():
-            return None
-
-        if not token.verify_token(raw_token):
-            token.attempts += 1
-            db.session.commit()
-            return None
-
-        token.used_at = datetime.now(timezone.utc)
-        db.session.commit()
-        return user
-
-    @staticmethod
-    def _random_token(length: int = 12) -> str:
-        alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'  # sem chars ambíguos
-        return ''.join(secrets.choice(alphabet) for _ in range(length))
+    def invalidate_token(token: str):
+        """
+        Invalida um token após o uso (opcional, pois o token já tem tempo de vida).
+        Para uma segurança extra, poderíamos armazenar tokens usados em uma blacklist.
+        Por simplicidade, o tempo de expiração já é uma boa medida.
+        """
+        pass

@@ -1,10 +1,11 @@
 # backend/controllers/auth_controller.py
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, url_for, current_app
 from flask_login import login_user, logout_user, login_required
 from flask_wtf import FlaskForm
 from sqlalchemy import select
 from wtforms import StringField, PasswordField, SubmitField
-from wtforms.validators import DataRequired
+from wtforms.validators import DataRequired, Email, EqualTo
+import logging
 
 from ..models.database import db
 from ..models.user import User
@@ -15,15 +16,26 @@ from ..models.disciplina import Disciplina
 from ..models.historico_disciplina import HistoricoDisciplina
 from utils.validators import validate_email, validate_password_strength
 from ..services.password_reset_service import PasswordResetService
+from ..services.email_service import EmailService
 
 auth_bp = Blueprint('auth', __name__)
+log = logging.getLogger(__name__)
 
-# Define o formulário de login
+class ForgotPasswordForm(FlaskForm):
+    email = StringField('E-mail', validators=[DataRequired(), Email()])
+    submit = SubmitField('Enviar E-mail de Recuperação')
+
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField('Nova Senha', validators=[DataRequired(), EqualTo('password2', message='As senhas não correspondem.')])
+    password2 = PasswordField('Confirmar Nova Senha', validators=[DataRequired()])
+    submit = SubmitField('Redefinir Senha')
+
 class LoginForm(FlaskForm):
     username = StringField('Matrícula / Usuário', validators=[DataRequired()])
     password = PasswordField('Senha', validators=[DataRequired()])
     submit = SubmitField('Entrar')
 
+# ... (outras rotas como /register, /login, /logout permanecem iguais) ...
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -126,7 +138,6 @@ def login():
 
         if user and user.is_active and user.check_password(password):
             login_user(user)
-            # --- REMOÇÃO DO REDIRECIONAMENTO PARA COMPLETAR CADASTRO ---
             return redirect(url_for('main.dashboard'))
         elif user and not user.is_active:
             flash('Sua conta precisa ser ativada. Use a página de registro para ativá-la.', 'warning')
@@ -143,37 +154,48 @@ def logout():
     flash('Você foi desconectado com sucesso.', 'info')
     return redirect(url_for('auth.login'))
 
+@auth_bp.route('/recuperar-senha', methods=['GET', 'POST'])
+def recuperar_senha():
+    form = ForgotPasswordForm()
+    if form.validate_on_submit():
+        # --- VERIFICAÇÃO EXPLÍCITA ---
+        mail_password = current_app.config.get('MAIL_PASSWORD')
+        if not mail_password:
+            log.error("ERRO CRÍTICO: A variável de ambiente MAIL_PASSWORD não foi carregada na aplicação web. Verifique o ficheiro WSGI.")
+            flash("Erro de configuração do servidor de e-mail. Contacte o administrador.", "danger")
+            return redirect(url_for('auth.login'))
+        # --- FIM DA VERIFICAÇÃO ---
+        
+        user = db.session.scalar(select(User).filter_by(email=form.email.data))
+        if user:
+            token = PasswordResetService.generate_token_for_user(user.id)
+            EmailService.send_password_reset_email(user, token)
+            flash('Um e-mail com instruções para redefinir sua senha foi enviado.', 'info')
+            return redirect(url_for('auth.login'))
+        else:
+            flash('Nenhum usuário encontrado com este endereço de e-mail.', 'warning')
+            
+    return render_template('recuperar_senha.html', form=form)
 
-@auth_bp.route('/set-new-with-token', methods=['GET', 'POST'])
-def set_new_with_token():
-    if request.method == 'POST':
-        matricula = request.form.get('matricula', '').strip()
-        raw_token = request.form.get('token', '').strip()
-        password = request.form.get('password', '')
-        password2 = request.form.get('password2', '')
+@auth_bp.route('/redefinir-senha/<token>', methods=['GET', 'POST'])
+def redefinir_senha(token):
+    user = PasswordResetService.verify_reset_token(token)
+    if not user:
+        flash('O link de redefinição de senha é inválido ou expirou.', 'danger')
+        return redirect(url_for('auth.recuperar_senha'))
 
-        if not matricula or not raw_token or not password or not password2:
-            flash('Preencha todos os campos.', 'danger')
-            return render_template('set_new_with_token.html', form_data=request.form)
-
-        if password != password2:
-            flash('As senhas não coincidem.', 'danger')
-            return render_template('set_new_with_token.html', form_data=request.form)
-
-        is_strong, message = validate_password_strength(password)
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        is_strong, message = validate_password_strength(form.password.data)
         if not is_strong:
             flash(message, 'danger')
-            return render_template('set_new_with_token.html', form_data=request.form)
-        
-        user = PasswordResetService.consume_with_user_and_raw_token(matricula, raw_token)
-        if not user:
-            flash('Token inválido, expirado ou dados incorretos.', 'danger')
-            return render_template('set_new_with_token.html', form_data=request.form)
-
-        user.set_password(password)
+            return render_template('redefinir_senha.html', form=form, token=token)
+            
+        user.set_password(form.password.data)
         user.must_change_password = False
         db.session.commit()
-        flash('Senha redefinida com sucesso. Faça o login com a nova senha.', 'success')
+        PasswordResetService.invalidate_token(token)
+        flash('Sua senha foi atualizada com sucesso!', 'success')
         return redirect(url_for('auth.login'))
 
-    return render_template('set_new_with_token.html', form_data={})
+    return render_template('redefinir_senha.html', form=form, token=token)

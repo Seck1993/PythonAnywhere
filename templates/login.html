@@ -25,9 +25,9 @@
             <button type="submit" class="btn btn-primary">Entrar</button>
         </form>
         
-        <div class="auth-link" style="display: flex; flex-direction: column; gap: 0.5rem;">
+        <div class="auth-link" style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1.5rem;">
             <a href="{{ url_for('auth.register') }}">Não tem uma conta ativa? Ative aqui.</a>
-            <a href="{{ url_for('auth.set_new_with_token') }}">Esqueci minha senha</a>
+            <a href="{{ url_for('auth.recuperar_senha') }}">Esqueci minha senha</a>
         </div>
     </div>
 </div>
